@@ -1,0 +1,149 @@
+concept: simple language with oop on custom bytecode vm
+
+#features
+	#compile time code execution
+		since the language is compiled to a bytecode, this makes it easy to run at compile time
+		compile time variables and functions are prefixed with @
+			they work similarly to c preprocessor macros
+		after compiler time pass, the variables and functions are dissolved
+		example of compile time variables and functions
+			```
+			@comptime_value: u32 = 92;
+			@comptime_function(): u32 {
+				return!(comptime_value - 20);
+			}
+
+			value: u32 = @comptime_function();
+			```
+
+		this gets compiled to
+			```
+			value: u32 = 72;
+			```
+
+	#built-ins
+		are treated like functions
+		can expand into tokens or not
+		if it expands, then semicolon is likely required
+
+		syntax looks like `builtin_name!(arguments)`
+		exclamation pointer clarifies to the compiler that it is a built-in
+
+		return!
+		typecast! defined in #casting section of this doc
+		reinterpretcast! defined in #casting section of this doc
+
+	#types
+		uN: unsigned integer of N bits
+		sN: signed integer of N bits
+		f32: IEEE 32 bit floating point
+		f64: IEEE 64 bit floating point
+		bool: 8 bit boolean
+		ptr: generic pointer to an address in vm memory
+	
+		auto: compiler-assumed type based on values and other variables used with it
+
+	#casting
+		typecast!(variable, type)
+			returns variable converted to type
+
+		example
+			```
+			variable: f32 = 6.7;
+			svariable: s32 = typecast!(variable, s32); /* this will truncate the float value to 6 */
+			```
+
+		typecasting from lower sized types to higher sized is automatic, but not the other way around
+		
+		example
+			```
+			a: u8 = 5;
+			b: u32 = a; /* valid implicit up-cast */
+
+			c: u64 = 281032912395128;
+			d: u16 = c; /* invalid implicit down-cast */
+			/* instead you would explicitly down-cast which truncates the value */
+			d: u16 = typecast!(d, u16);
+			```
+
+		typecasting from unsigned integer to signed integer is automatic, but not the other way
+		same bit size rules apply
+
+		example
+			```
+			a: u32 = 92;
+			b: s32 = a; /* valid implicit type cast */
+
+			c: s32 = -2;
+			d: u32 = c; /* invalid implicit type cast */
+			/* instead you would need to explicitly type cast the value, which will limit negative numbers to 0 */
+			d: u32 = typecast!(c, u32);
+
+		reinterpretcast!(variable, type)
+			interprets variable with different type, with no processing done except for truncation for smaller bit sizes
+			this is useful for pointer arithmetic
+
+			reinterpretcast is never automatic as it can result in unwanted behavior
+
+		example
+			```
+			a: s32 = -123;
+			b: u32 = reinterpretcast!(a, u32);
+
+			c: f32 = 92.53;
+			d: ptr = reinterpretcast(c, ptr);
+			```
+
+	#pointers
+		1 type for all pointers (ptr)
+		to dereference deref!(pointer)
+
+	#operators
+		can only be used on like-typed variables, however some automatic casting is in effect as mentioned in #casting
+		+ addition/sum operator
+			a: u32 = 2 + 5; /* a = 7 */
+		- subtraction operator
+			b: u32 = 9 - 3; /* b = 6 */
+		* multiplication operator
+			c: u32 = 5 * 9; /* c = 45 */
+		/ division operator
+			d: u32 = 512 / 4; /* d = 128 */
+		= assigment operator
+			e: u32 = 99; /* e = 99 */
+		+=, -=, *=, /= operator
+			a: u32 = 9; /* a = 9 */
+			a += 6; /* a = 15 */
+			a -= 2; /* a = 13 */
+			a *= 4; /* a = 52 */
+			a /= 2; /* a = 26 */
+		
+#syntax
+	```
+	/* explicit comment */
+	// line comment
+
+	/* variable declaration */
+	variable_name: type;
+
+	/* variable initialization */
+	variable_name: type = value;
+
+	/* assumed type via auto */
+	variable_name: auto = value;
+
+	/* function declaration */
+	function(name1: type1, ..., nameN: typeN): return_type;
+	/* void function declaration */
+	function(name1: type1, ..., nameN: typeN);
+
+	/* function definition */
+	function(name1: type1, ..., nameN: typeN): return_type {
+		...
+		return<value>;
+	}
+	/* void function definition */
+	function(name1: type1, ..., nameN: typeN) {
+		...
+		return;
+	}
+	```
