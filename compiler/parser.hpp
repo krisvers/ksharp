@@ -26,25 +26,14 @@ struct Token {
 	const char* valuePtr;
 };
 
-struct ASTNodeGeneric {
-	Token token;
-	struct ASTNodeGeneric* next;
-};
-
 struct ASTNodeBinary {
 	Token token;
 	struct ASTNodeGeneric* left;
 	struct ASTNodeGeneric* right;
 };
 
-struct ASTNodeMulti {
-	Token token;
-	unsigned int length;
-	struct ASTNodeGeneric** children;
-};
-
 struct AST {
-	ASTNodeGeneric* root;
+	ASTNodeBinary* root;
 };
 
 class Parser {

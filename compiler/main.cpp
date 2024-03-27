@@ -3,9 +3,7 @@
 using namespace ksharp::compiler;
 
 const char* test_string = R"(
-	a: u32 = 92;
-	b: s32 = a; /* valid implicit type cast */
-	c: s32 = -2;
+	/* comment */\n// test
 )";
 
 int main(int argc, char** argv) {

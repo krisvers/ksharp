@@ -121,8 +121,7 @@ concept: simple language with oop on custom bytecode vm
 		
 #syntax
 	```
-	/* explicit comment */
-	// line comment
+	/* comment */
 
 	/* variable declaration */
 	variable_name: type;
