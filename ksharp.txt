@@ -40,6 +40,8 @@ concept: simple language with oop on custom bytecode vm
 		f64: IEEE 64 bit floating point
 		bool: 8 bit boolean
 		ptr: generic pointer to an address in vm memory
+		str: string type null-terminated char pointer with length
+			str.length is the length of the string
 	
 		auto: compiler-assumed type based on values and other variables used with it
 
@@ -132,17 +134,17 @@ concept: simple language with oop on custom bytecode vm
 	variable_name: auto = value;
 
 	/* function declaration */
-	function(name1: type1, ..., nameN: typeN): return_type;
+	function(name: type): return_type;
 	/* void function declaration */
-	function(name1: type1, ..., nameN: typeN);
+	function(name: type);
 
 	/* function definition */
-	function(name1: type1, ..., nameN: typeN): return_type {
+	function(name: type): return_type {
 		...
-		return<value>;
+		return!(value);
 	}
 	/* void function definition */
-	function(name1: type1, ..., nameN: typeN) {
+	function(name: type) {
 		...
 		return;
 	}

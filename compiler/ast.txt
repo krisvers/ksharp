@@ -1,0 +1,33 @@
+function() {
+	return!();
+}
+
+						FUNCTION DECL (2)
+	IDENTIFIER function (0)			SCOPE (1)
+											RETURN VOID (0)
+
+
+variable: u32 = 692;
+
+
+									COMPOUND
+				DECLARATION (2)						ASSIGMENT (2)
+		ID variable	(0)   TYPE u32 (0)		ID variable (0)		LITERAL 692 (0)
+
+@compiletime_function(): f32 {
+	return 6.2;
+}
+
+											ANNOTATION (1)
+													COMPOUND (2)
+								FUNCTION DECL (2)							FUNCTION DEFINE (2)
+	ID compiletime_function (0)				TYPE f32 (0)	ID compiletime_function (0)		SCOPE (1)
+																									RETURN 6.2 (0)
+
+global: u32 = 5;
+global2: s16;
+
+										COMPOUND (2)
+			DECL (2)												  COMPOUND (2)
+ID global2 (0)		TYPE s16 (0)					DECLARATION (2)					DEFINITON (2)
+											ID global (0)	  TYPE u32 (0)	ID global (0)		LITERAL 5 (0)
