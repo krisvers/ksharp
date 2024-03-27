@@ -24,7 +24,21 @@ int Parser::parse(AST& ast, const char* source) {
 				continue;
 			}
 
-			
+			if (source[i] == '@') {
+				currentToken.type = TokenType::ANNOTATION;
+				currentToken.valuePtr = &source[i];
+			} else if (source[i] == '{') {
+				currentToken.type = TokenType::COMPOUND;
+				currentToken.valuePtr = &source[i];
+			} else if (source[i] == '(') {
+				currentToken.type = TokenType::SCOPE;
+				currentToken.valuePtr = &source[i];
+			} else if (source[i] == ';') {
+				currentToken.type = TokenType::NONE;
+				currentToken.valuePtr = &source[i];
+			} else if (source[i] == '=') {
+				currentToken
+			}
 		}
 	}
 

@@ -7,25 +7,17 @@ namespace ksharp::compiler::parser {
 
 enum class TokenType {
 	NONE,
-	/* meta types */
+	ANNOTATION,
 	COMPOUND,
-	ASSIGMENT,
-	COMPARISON,
-	IF,
-	ELSE,
-	WHILE,
-	FOR,
-
-	IDENTIFIER,
-	OPERATOR,
-	LITERAL,
-	DECLARATION,
 	FUNC_DECLARATION,
+	DECLARATION,
+	FUNC_DEFINITION,
+	ASSIGMENT,
+	IDENTIFIER,
 	TYPE,
-
-	FUNC_CALL,
-	PARAMETER,
+	SCOPE,
 	RETURN,
+	LITERAL,
 };
 
 struct Token {

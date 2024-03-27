@@ -29,5 +29,5 @@ global2: s16;
 
 										COMPOUND (2)
 			DECL (2)												  COMPOUND (2)
-ID global2 (0)		TYPE s16 (0)					DECLARATION (2)					DEFINITON (2)
+ID global2 (0)		TYPE s16 (0)					DECLARATION (2)					ASSIGMENT (2)
 											ID global (0)	  TYPE u32 (0)	ID global (0)		LITERAL 5 (0)
