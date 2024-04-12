@@ -3,37 +3,20 @@
 
 #include <string>
 
+#include "general.hpp"
+#include "tokenizer.hpp"
+
 namespace ksharp::compiler::parser {
 
-enum class TokenType {
-	NONE,
-	ANNOTATION,
-	COMPOUND,
-	FUNC_DECLARATION,
-	DECLARATION,
-	FUNC_DEFINITION,
-	ASSIGMENT,
-	IDENTIFIER,
-	TYPE,
-	SCOPE,
-	RETURN,
-	LITERAL,
-};
-
-struct Token {
-	TokenType type;
-	std::string value;
-	const char* valuePtr;
-};
-
-struct ASTNodeBinary {
-	Token token;
-	struct ASTNodeGeneric* left;
-	struct ASTNodeGeneric* right;
+struct ASNode {
+	tokenizer::Token token;
+	struct ASNode* sibling;
+	struct ASNode* child;
+	struct ASNode* parent;
 };
 
 struct AST {
-	ASTNodeBinary* root;
+	ASNode* root;
 };
 
 class Parser {

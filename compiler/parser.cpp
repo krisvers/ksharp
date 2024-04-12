@@ -1,72 +1,43 @@
 #include "parser.hpp"
+#include "general.hpp"
+#include "tokenizer.hpp"
+
 #include <iostream>
+#include <vector>
 
 using namespace ksharp::compiler::parser;
 
-static char requestChar(const char* source, unsigned int index, unsigned int len) {
-	if (index < len) {
-		return source[index];
-	}
-
-	return '\0';
-}
-
-#define req(i) requestChar(source, i, sourceLength)
-
 int Parser::parse(AST& ast, const char* source) {
-	ast.root = new ASTNodeBinary();
-	unsigned int sourceLength = strlen(source);
-	
-	Token currentToken = Token();
-	currentToken.type = TokenType::IDENTIFIER;
-	currentToken.value = "";
-	currentToken.valuePtr = nullptr;
+	MetaInfo metaInfo;
+	metaInfo.line = 1;
+	metaInfo.column = 1;
+	metaInfo.index = 0;
+	metaInfo.length = strlen(source);
 
-	unsigned int column = 1;
-	unsigned int line = 1;
+	tokenizer::Tokenizer tokenizer;
+	tokenizer::Token token;
 
-	for (unsigned int i = 0; i < sourceLength; ++i) {
-		++column;
-		if (source[i] == '\n') {
-			column = 1;
-			++line;
-			continue;
+	ASNode** node = &ast.root;
+	ASNode* prevNode = NULL;
+
+	while (tokenizer.tokenize(source, token, metaInfo) == 0) {
+		if (token.type == tokenizer::TokenType::NONE) {
+			break;
 		}
 
-		if (source[i] == ' ' || source[i] == '\t' || source[i] == '\r') {
-			continue;
-		}
+		*node = new ASNode();
+		(*node)->sibling = nullptr;
+		(*node)->child = nullptr;
+		(*node)->parent = nullptr;
+		(*node)->token = token;
 
-		if (source[i] == '/') {
-			char c = req(i + 1);
-			if (c == '/') {
-				while (c != '\n') {
-					++i;
-					++column;
-					c = req(i + 1);
-					if (c == '\0') {
-						std::cout << "Error: Unexpected end of file at (" << line << ":" << column << ")" << std::endl;
-						return 1;
-					}
-				}
-				std::cout << "Line comment: (" << line << ":" << column << ")" << std::endl;
-			} else if (c == '*') {
-				while (source[i] != '*' || c != '/') {
-					++i;
-					++column;
-					c = req(i + 1);
-					if (source[i] == '\n') {
-						column = 1;
-						++line;
-						continue;
-					} else if (c == '\0') {
-						std::cout << "Error: Unexpected end of file (" << line << ":" << column << ")" << std::endl;
-						return 1;
-					}
-				}
-				std::cout << "Section comment: (" << line << ":" << column << ")" << std::endl;
+		if (prevNode != NULL) {
+			if (tokenizer::Tokenizer::isTokenFinal(prevNode->token.type)) {
+
 			}
 		}
+
+		prevNode = *node;
 	}
 
 	return 0;
