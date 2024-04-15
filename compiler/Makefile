@@ -1,5 +1,5 @@
 CXX = clang++
-CXXFLAGS = -std=c++17 -Wall -Wextra -Werror -Wno-unused-parameter
+CXXFLAGS = -std=c++17 -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-but-set-variable
 CXXSRC = $(shell find . -type f -name "*.cpp")
 
 OBJDIR = obj

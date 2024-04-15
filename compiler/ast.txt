@@ -1,49 +1,39 @@
-variable: u32 = 692;
-
-
-DECLARATION,				ASSIGMENT
-	|							|
-ID variable, TYPE u32		ID variable, LITERAL 692
-
-function(): f32 {
-	return 6.2;
-}
-
-FUNC_DECLARATION,			FUNC_DEFINITION
-	|							|
-ID function, TYPE f32		ID function, SCOPE
-											|
-										RETURN,	SCOPE_END
-											|
-										LITERAL 6.2
-
-function(): s32 {
-	if (a == 9) {
-		return 2;
+fib: func(n: u32) -> u32 {
+	if (n <= 1) {
+		return!(n);
 	}
 
-	return 4;
+	return!(fib(n - 1) + fib(n - 2));
 }
 
-FUNC_DEFINITION
-	|
-ID function,	SCOPE
-					|
-				IF_STATEMENT,	SCOPE_END
-					|
-				EXPRESSION a == 9,	SCOPE
-										|
-									RETURN,	SCOPE_END
-										|
-									LITERAL 2
-
-FUNC_DEFINITION
-| ID function
-| SCOPE
-	| IF_STATEMENT
-	|	| EXPRESSION a == 9
-	|	| SCOPE
-	|		| RETURN
-	|		|	| LITERAL 2
-	|		| SCOPE_END
-	| SCOPE_END	
++- DECL
+|	|- ID "fib"
+|	+- TYPE "func(u32) -> u32"
++- FUNC_DEFINITION
+	|- ID "fib"
+	+- SCOPE
+		|- IF
+		|	|- CASE
+		|	|	+- COMPARISON_EXPR
+		|	|		|- ID n
+		|	|		|- OPERATION <=
+		|	|		+- LITERAL 1
+		|	+- SCOPE
+		|		|- RETURN
+		|		|	+- ID N
+		|		+- SCOPE_END
+		|- RETURN
+		|	+- ADDITION_EXPR
+		|		|- FUNC_CALL
+		|		|	|- ID fib
+		|		|	+- ARG
+		|		|		+- SUBTRACTION_EXPR
+		|		|			|- ID n
+		|		|			+- LITERAL 1
+		|		+- FUNC_CALL
+		|			|- ID fib
+		|			+- ARG
+		|				+- SUBTRACTION_EXPR
+		|					|- ID n
+		|					+- LITERAL 2	
+		+- SCOPE_END

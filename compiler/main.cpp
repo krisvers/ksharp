@@ -2,9 +2,7 @@
 
 using namespace ksharp::compiler;
 
-const char* test_string = R"(
-	/* comment */\n// test
-)";
+const char* test_string = R"(variable: u32;)";
 
 int main(int argc, char** argv) {
 	parser::Parser parser;
