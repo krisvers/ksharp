@@ -56,6 +56,30 @@ std::ostream& Parser::printNode(std::ostream& os, ASNode* node, unsigned int dep
 		case ASNodeType::RETURN_TYPE:
 			os << "Return Type: \"" << node->value << "\"" << std::endl;
 			break;
+		case ASNodeType::FUNCTION_DEFINITION:
+			os << "Function Definition: \"" << node->value << "\"" << std::endl;
+			break;
+		case ASNodeType::SCOPE:
+			os << "Scope: \"" << node->value << "\"" << std::endl;
+			break;
+		case ASNodeType::SCOPE_END:
+			os << "Scope End: \"" << node->value << "\"" << std::endl;
+			break;
+		case ASNodeType::LITERAL_INTEGER:
+			os << "Literal Integer: \"" << node->value << "\"" << std::endl;
+			break;
+		case ASNodeType::LITERAL_FLOAT:
+			os << "Literal Float: \"" << node->value << "\"" << std::endl;
+			break;
+		case ASNodeType::LITERAL_STRING:
+			os << "Literal String: \"" << node->value << "\"" << std::endl;
+			break;
+		case ASNodeType::LITERAL_BOOL:
+			os << "Literal Bool: \"" << node->value << "\"" << std::endl;
+			break;
+		case ASNodeType::KEYWORD:
+			os << "Keyword: \"" << node->value << "\"" << std::endl;
+			break;
 		default:
 			break;
 	}
@@ -197,13 +221,31 @@ int Parser::parse(AST& ast, const char* source) {
 
 					nextToken = req(i + 3);
 					if (nextToken == nullptr) {
-						std::cout << "Error: no token; expected semicolon token" << std::endl;
+						std::cout << "Error: no token found; expected semicolon or assigment token" << std::endl;
 						return 1;
 					}
 
-					if (nextToken->type != tokenizer::TokenType::SEMICOLON) {
-						std::cout << "Error: expected semicolon token" << std::endl;
+					if (nextToken->type != tokenizer::TokenType::SEMICOLON && nextToken->type != tokenizer::TokenType::ASSIGNMENT) {
+						std::string str;
+						tokenizer.tokenToString(*nextToken, str);
+						std::cout << "Error: expected semicolon or assignment token; found " << str << std::endl;
 						return 1;
+					}
+
+					if (nextToken->type == tokenizer::TokenType::ASSIGNMENT) {
+						nextToken = req(i + 4);
+						if (nextToken == nullptr) {
+							std::cout << "Error: no token found; expected literal token" << std::endl;
+							return 1;
+						}
+
+						(*node)->child->sibling->sibling = new ASNode();
+						(*node)->child->sibling->sibling->type = ASNodeType::LITERAL_INTEGER;
+						(*node)->child->sibling->sibling->value = nextToken->value;
+						(*node)->child->sibling->sibling->sibling = nullptr;
+						(*node)->child->sibling->sibling->child = nullptr;
+						(*node)->child->sibling->sibling->parent = *node;
+						i += 2;
 					}
 
 					if (prevNode != nullptr) {
@@ -212,10 +254,23 @@ int Parser::parse(AST& ast, const char* source) {
 
 					prevNode = *node;
 					node = &(*node)->sibling;
-
 					i += 3;
 				}
 			}
+		} else if (token->type == tokenizer::TokenType::KEYWORD) {
+			*node = new ASNode();
+			(*node)->type = ASNodeType::KEYWORD;
+			(*node)->value = token->value;
+			(*node)->sibling = nullptr;
+			(*node)->child = nullptr;
+			(*node)->parent = parent;
+
+			if (prevNode != nullptr) {
+				prevNode->sibling = *node;
+			}
+
+			prevNode = *node;
+			node = &(*node)->sibling;
 		}
 	}
 

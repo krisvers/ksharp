@@ -10,10 +10,6 @@ struct MetaInfo {
 	unsigned int length;
 };
 
-struct Keyword {
-	std::string name;
-};
-
 } // namespace ksharp::compiler
 
 #endif

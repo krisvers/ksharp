@@ -18,6 +18,7 @@ enum class TokenType {
 	SCOPE,
 	SCOPE_END,
 	TYPE_SEPARATOR,
+	ASSIGNMENT,
 	SEMICOLON,
 	KEYWORD,
 };
@@ -32,12 +33,8 @@ struct Token {
 class Tokenizer {
 public:
 	static void tokenToString(Token& token, std::string& str);
-	static Keyword* getKeyword(const char* source, unsigned int index, MetaInfo& metaInfo);
 
 	int tokenize(const char* source, std::vector<Token>& tokens, MetaInfo& metaInfo);
-
-private:
-	inline static std::map<std::string, Keyword> keywords;
 };
 
 } // namespace ksharp::compiler::tokenizer

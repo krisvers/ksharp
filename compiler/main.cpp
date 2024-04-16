@@ -5,16 +5,15 @@
 using namespace ksharp::compiler;
 
 const char* test_string = R"(
-fibonacci: (n: u32) u32;
+var: u32 = 5;
+test! 65;
 )";
 
 int main(int argc, char** argv) {
 	parser::Parser parser;
 	parser::AST ast;
-	if (parser.parse(ast, test_string) != 0) {
-		return 1;
-	}
 
+	parser.parse(ast, test_string);
 	parser.printNode(std::cout, ast.root, 0);
 	parser.freeNode(ast.root);
 

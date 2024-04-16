@@ -92,42 +92,6 @@ static bool isStartTypeChar(char ch) {
 	return isAlpha(ch);
 }
 
-Keyword* Tokenizer::getKeyword(const char* source, unsigned int index, MetaInfo& metaInfo) {
-	char ch = req(index);
-	while (isWhitespace(ch)) {
-		++index;
-		ch = req(index);
-		if (ch == '\0') {
-			return nullptr;
-		}
-	}
-
-	if (!isStartIdentifier(ch)) {
-		return nullptr;
-	}
-
-	unsigned int i = index;
-	while (true) {
-		++i;
-		ch = req(i);
-		if (ch == '!') {
-			break;
-		}
-
-		if (ch == '\0' || !isIdentifier(ch)) {
-			return nullptr;
-		}
-	}
-
-	std::string name(&source[index], i - index);
-	auto it = keywords.find(name);
-	if (it == keywords.end()) {
-		return nullptr;
-	}
-
-	return &it->second;
-}
-
 int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo& metaInfo) {
 	Token token;
 	token.type = TokenType::NONE;
@@ -193,6 +157,11 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 
 			token.value = std::string(&source[i], j - i);
 			token.hasValue = true;
+			if (ch == '!') {
+				token.type = TokenType::KEYWORD;
+				++j;
+			}
+
 			i = j;
 			break;
 		} else if (isLiteral(ch)) {
@@ -341,6 +310,49 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			token.hasValue = true;
 			i = j;
 			break;
+		} else if (isLiteral(ch)) {
+			token.type = TokenType::LITERAL;
+			token.valuePtr = &source[i];
+
+			unsigned int j = i;
+			while (isLiteral(ch)) {
+				++j;
+				ch = req(j);
+				++metaInfo.column;
+				if (ch == '\n') {
+					++metaInfo.line;
+					metaInfo.column = 0;
+				}
+
+				if (ch == '\0') {
+					std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
+					metaInfo.index = j - 1;
+					return 1;
+				}
+			}
+
+			token.value = std::string(&source[i], j - i);
+			token.hasValue = true;
+			i = j;
+			break;
+		} else if (ch == '{') {
+			token.type = TokenType::SCOPE;
+			token.value = "{";
+			token.valuePtr = &source[i];
+			token.hasValue = true;
+
+			++i;
+			++metaInfo.column;
+			break;
+		} else if (ch == '}') {
+			token.type = TokenType::SCOPE_END;
+			token.value = "}";
+			token.valuePtr = &source[i];
+			token.hasValue = true;
+
+			++i;
+			++metaInfo.column;
+			break;
 		} else if (ch == ';') {
 			token.type = TokenType::SEMICOLON;
 			token.value = ";";
@@ -349,6 +361,67 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 
 			++i;
 			++metaInfo.column;
+			break;
+		} else if (ch == '=') {
+			token.type = TokenType::ASSIGNMENT;
+			token.value = "=";
+			token.valuePtr = &source[i];
+			token.hasValue = true;
+
+			tokens.push_back(token);
+
+			++metaInfo.column;
+			unsigned int j = ++i;
+			ch = req(j);
+			while (isWhitespace(ch)) {
+				++j;
+				ch = req(j);
+				++metaInfo.column;
+				if (ch == '\n') {
+					++metaInfo.line;
+					metaInfo.column = 0;
+				}
+
+				if (ch == '\0') {
+					std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
+					metaInfo.index = j;
+					return 1;
+				}
+			}
+
+			i = j;
+			if (ch == ';') {
+				std::cout << "Error: Unexpected character '" << ch << "' (0x" << std::hex << static_cast<unsigned int>(ch) << std::dec << ") at (" << metaInfo.line << ":" << metaInfo.column << ")\nExpected literal" << std::endl;
+				metaInfo.index = i;
+				return 1;
+			}
+
+			if (isLiteral(ch)) {
+				token.type = TokenType::LITERAL;
+				token.valuePtr = &source[i];
+
+				while (isLiteral(ch)) {
+					++j;
+					ch = req(j);
+					++metaInfo.column;
+					if (ch == '\n') {
+						++metaInfo.line;
+						metaInfo.column = 0;
+					}
+
+					if (ch == '\0') {
+						std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
+						metaInfo.index = j - 1;
+						return 1;
+					}
+				}
+
+				token.value = std::string(&source[i], j - i);
+				token.hasValue = true;
+				i = j;
+				break;
+			}
+
 			break;
 		} else {
 			std::cout << "Error: Unexpected character '" << ch << "' (0x" << std::hex << static_cast<unsigned int>(ch) << std::dec << ") at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
