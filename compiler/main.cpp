@@ -6,7 +6,7 @@ using namespace ksharp::compiler;
 
 const char* test_string = R"(
 var: u32 = 5;
-test! 65;
+return! "haha this is a string \"stringy string string\" done";
 )";
 
 int main(int argc, char** argv) {

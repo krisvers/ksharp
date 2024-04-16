@@ -2,6 +2,7 @@
 #define KRISVERS_KSHARP_COMPILER_PARSER_HPP
 
 #include <string>
+#include <functional>
 
 #include "general.hpp"
 #include "tokenizer.hpp"
@@ -27,6 +28,7 @@ enum class ASNodeType {
 	LITERAL_BOOL,
 
 	KEYWORD,
+	RETURN,
 };
 
 struct ASNode {
@@ -41,12 +43,19 @@ struct AST {
 	ASNode* root;
 };
 
+struct ASKeyword {
+	std::string name;
+};
+
 class Parser {
 public:
 	void freeNode(ASNode* node);
 	std::ostream& printNode(std::ostream& os, ASNode* node, unsigned int depth);
 
 	int parse(AST& ast, const char* source);
+
+private:
+	std::map<std::string, ASKeyword> keywords;
 };
 
 }

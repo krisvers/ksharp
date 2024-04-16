@@ -77,7 +77,7 @@ static bool isStartIdentifier(char ch) {
 }
 
 static bool isLiteral(char ch) {
-	return isDigit(ch);
+	return isDigit(ch) || ch == '.';
 }
 
 static bool isTypeSeparator(char ch) {
@@ -188,6 +188,47 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			token.value = std::string(&source[i], j - i);
 			token.hasValue = true;
 			i = j;
+			break;
+		} else if (ch == '"') {
+			token.type = TokenType::LITERAL;
+			token.valuePtr = &source[i];
+
+			unsigned int j = i;
+			++j;
+			ch = req(j);
+			++metaInfo.column;
+			if (ch == '\n') {
+				++metaInfo.line;
+				metaInfo.column = 0;
+			}
+
+			while (ch != '"') {
+				++j;
+				ch = req(j);
+				++metaInfo.column;
+				if (ch == '\\') {
+					++j;
+					char c = req(j);
+					if (c == '"') {
+						++j;
+					}
+				}
+
+				if (ch == '\n') {
+					++metaInfo.line;
+					metaInfo.column = 0;
+				}
+
+				if (ch == '\0') {
+					std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
+					metaInfo.index = j;
+					return 1;
+				}
+			}
+
+			token.value = std::string(&source[i], j - i + 1);
+			token.hasValue = true;
+			i = j + 1;
 			break;
 		} else if (isTypeSeparator(ch)) {
 			token.type = TokenType::TYPE_SEPARATOR;

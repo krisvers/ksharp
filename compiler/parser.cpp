@@ -2,7 +2,7 @@
 #include "general.hpp"
 #include "tokenizer.hpp"
 
-#include <iostream>s
+#include <iostream>
 
 using namespace ksharp::compiler::parser;
 
@@ -33,7 +33,7 @@ void Parser::freeNode(ASNode* node) {
 }
 
 std::ostream& Parser::printNode(std::ostream& os, ASNode* node, unsigned int depth) {
-	for (int i = 0; i < depth; ++i) {
+	for (unsigned int i = 0; i < depth; ++i) {
 		os << "  ";
 	}
 
@@ -80,7 +80,11 @@ std::ostream& Parser::printNode(std::ostream& os, ASNode* node, unsigned int dep
 		case ASNodeType::KEYWORD:
 			os << "Keyword: \"" << node->value << "\"" << std::endl;
 			break;
+		case ASNodeType::RETURN:
+			os << "Return: \"" << node->value << "\"" << std::endl;
+			break;
 		default:
+			os << "Unknown: \"" << node->value << "\"" << std::endl;
 			break;
 	}
 
@@ -265,12 +269,40 @@ int Parser::parse(AST& ast, const char* source) {
 			(*node)->child = nullptr;
 			(*node)->parent = parent;
 
-			if (prevNode != nullptr) {
-				prevNode->sibling = *node;
-			}
+			if (token->value == "return") {
+				nextToken = req(i + 1);
+				if (nextToken == nullptr) {
+					std::cout << "Error: no token found; expected literal token" << std::endl;
+					return 1;
+				}
 
-			prevNode = *node;
-			node = &(*node)->sibling;
+				(*node)->type = ASNodeType::RETURN;
+				(*node)->value = token->value;
+				(*node)->sibling = nullptr;
+				(*node)->parent = parent;
+				(*node)->child = new ASNode();
+
+				if (nextToken->type == tokenizer::TokenType::IDENTIFIER) {
+					(*node)->child->type = ASNodeType::IDENTIFIER;
+				} else if (nextToken->type == tokenizer::TokenType::LITERAL) {
+					if (nextToken->value.find("\"") != std::string::npos) {
+						(*node)->child->type = ASNodeType::LITERAL_STRING;
+					} else if (nextToken->value.find(".") != std::string::npos) {
+						(*node)->child->type = ASNodeType::LITERAL_FLOAT;
+					} else if (nextToken->value == "true" || nextToken->value == "false") {
+						(*node)->child->type = ASNodeType::LITERAL_BOOL;
+					} else {
+						(*node)->child->type = ASNodeType::LITERAL_INTEGER;
+					}
+				}
+
+				(*node)->child->value = nextToken->value;
+				(*node)->child->sibling = nullptr;
+				(*node)->child->child = nullptr;
+				(*node)->child->parent = *node;
+
+				i += 1;
+			}
 		}
 	}
 
