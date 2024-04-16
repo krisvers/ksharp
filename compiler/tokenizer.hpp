@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 #include "general.hpp"
 
@@ -13,10 +14,12 @@ enum class TokenType {
 	IDENTIFIER,
 	LITERAL,
 	TYPE,
+	FUNCTION_TYPE,
 	SCOPE,
 	SCOPE_END,
+	TYPE_SEPARATOR,
 	SEMICOLON,
-	RETURN,
+	KEYWORD,
 };
 
 struct Token {
@@ -31,7 +34,7 @@ public:
 	static void tokenToString(Token& token, std::string& str);
 	static Keyword* getKeyword(const char* source, unsigned int index, MetaInfo& metaInfo);
 
-	int tokenize(const char* source, Token& token, MetaInfo& metaInfo);
+	int tokenize(const char* source, std::vector<Token>& tokens, MetaInfo& metaInfo);
 
 private:
 	inline static std::map<std::string, Keyword> keywords;

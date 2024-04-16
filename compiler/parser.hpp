@@ -8,8 +8,31 @@
 
 namespace ksharp::compiler::parser {
 
+enum class ASNodeType {
+	DECLARATION,
+		IDENTIFIER,
+		TYPE,
+
+	FUNCTION_DECLARATION,
+		FUNCTION_ARGUMENT,
+		RETURN_TYPE,
+
+	FUNCTION_DEFINITION,
+
+	SCOPE,
+	SCOPE_END,
+
+	LITERAL_INTEGER,
+	LITERAL_FLOAT,
+	LITERAL_STRING,
+	LITERAL_BOOL,
+
+	KEYWORD_RETURN,
+};
+
 struct ASNode {
-	tokenizer::Token token;
+	ASNodeType type;
+	std::string value;
 	struct ASNode* sibling;
 	struct ASNode* child;
 	struct ASNode* parent;
@@ -21,6 +44,9 @@ struct AST {
 
 class Parser {
 public:
+	void freeNode(ASNode* node);
+	std::ostream& printNode(std::ostream& os, ASNode* node, unsigned int depth);
+
 	int parse(AST& ast, const char* source);
 };
 
