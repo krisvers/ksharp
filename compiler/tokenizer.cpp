@@ -31,6 +31,9 @@ void Tokenizer::tokenToString(Token& token, std::string& str) {
 		case TokenType::TYPE_SEPARATOR:
 			str = "TYPE_SEPARATOR";
 			break;
+		case TokenType::ASSIGNMENT:
+			str = "ASSIGNMENT";
+			break;
 		case TokenType::SEMICOLON:
 			str = "SEMICOLON";
 			break;
@@ -38,6 +41,7 @@ void Tokenizer::tokenToString(Token& token, std::string& str) {
 			str = "KEYWORD";
 			break;
 		default:
+			str = "UNKNOWN";
 			break;
 	}
 }
@@ -293,7 +297,7 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 					}
 				}
 
-				while (ch != ';') {
+				while (ch != ';' && ch != '=') {
 					++j;
 					ch = req(j);
 					++metaInfo.column;
@@ -318,6 +322,18 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 					it = token.value.find(" ");
 				}
 				token.hasValue = true;
+
+				tokens.push_back(token);
+				if (ch == ';') {
+					token.type = TokenType::SEMICOLON;
+					token.value = ";";
+					token.valuePtr = &source[j];
+					token.hasValue = true;
+
+					++j;
+					++metaInfo.column;
+				}
+
 				i = j;
 				break;
 			} else {

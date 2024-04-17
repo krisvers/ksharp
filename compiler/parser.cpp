@@ -117,6 +117,12 @@ int Parser::parse(AST& ast, const char* source) {
 		}
 	}
 
+	for (tokenizer::Token& token : tokens) {
+		std::string str;
+		tokenizer.tokenToString(token, str);
+		std::cout << str << ": \"" << token.value << "\"" << std::endl;
+	}
+
 	ASNode** node = &ast.root;
 	ASNode* prevNode = nullptr;
 	ASNode* parent = nullptr;
@@ -168,7 +174,8 @@ int Parser::parse(AST& ast, const char* source) {
 						arguments.replace(arguments.find(")"), arguments.length(), "");
 
 						std::string args = arguments;
-						if (args.length() > 0) {
+						ASNode** argNode = &(*node)->child->sibling->sibling;
+						while (args.length() > 0) {
 							auto next = args.find(",");
 							if (next == std::string::npos) {
 								next = args.length();
@@ -177,30 +184,32 @@ int Parser::parse(AST& ast, const char* source) {
 							std::string arg = args.substr(0, next);
 							args.replace(0, next + 1, "");
 
-							(*node)->child->sibling->sibling = new ASNode();
-							(*node)->child->sibling->sibling->type = ASNodeType::FUNCTION_ARGUMENT;
-							(*node)->child->sibling->sibling->value = arg;
-							(*node)->child->sibling->sibling->child = nullptr;
-							(*node)->child->sibling->sibling->sibling = nullptr;
-							(*node)->child->sibling->sibling->parent = *node;
+							*argNode = new ASNode();
+							(*argNode)->type = ASNodeType::FUNCTION_ARGUMENT;
+							(*argNode)->value = arg;
+							(*argNode)->child = nullptr;
+							(*argNode)->sibling = nullptr;
+							(*argNode)->parent = *node;
 
 							next = arg.find(":");
-							(*node)->child->sibling->sibling->child = new ASNode();
-							(*node)->child->sibling->sibling->child->type = ASNodeType::IDENTIFIER;
+							(*argNode)->child = new ASNode();
+							(*argNode)->child->type = ASNodeType::IDENTIFIER;
 							if (next != std::string::npos) {
-								(*node)->child->sibling->sibling->child->value = arg.substr(0, next);
+								(*argNode)->child->value = arg.substr(0, next);
 							}
 
-							(*node)->child->sibling->sibling->child->sibling = nullptr;
-							(*node)->child->sibling->sibling->child->child = nullptr;
-							(*node)->child->sibling->sibling->child->parent = (*node)->child->sibling;
+							(*argNode)->child->sibling = nullptr;
+							(*argNode)->child->child = nullptr;
+							(*argNode)->child->parent = (*node)->child->sibling;
 
-							(*node)->child->sibling->sibling->child->sibling = new ASNode();
-							(*node)->child->sibling->sibling->child->sibling->type = ASNodeType::TYPE;
-							(*node)->child->sibling->sibling->child->sibling->value = arg.substr(arg.find(":") + 1);
-							(*node)->child->sibling->sibling->child->sibling->sibling = nullptr;
-							(*node)->child->sibling->sibling->child->sibling->child = nullptr;
-							(*node)->child->sibling->sibling->child->sibling->parent = (*node)->child->sibling->sibling;
+							(*argNode)->child->sibling = new ASNode();
+							(*argNode)->child->sibling->type = ASNodeType::TYPE;
+							(*argNode)->child->sibling->value = arg.substr(arg.find(":") + 1);
+							(*argNode)->child->sibling->sibling = nullptr;
+							(*argNode)->child->sibling->child = nullptr;
+							(*argNode)->child->sibling->parent = (*node)->child->sibling->sibling;
+
+							argNode = &(*argNode)->sibling;
 						}
 					} else {
 						*node = new ASNode();
@@ -223,6 +232,7 @@ int Parser::parse(AST& ast, const char* source) {
 						(*node)->child->sibling->parent = *node;
 					}
 
+					tokenizer::TokenType prevType = nextToken->type;
 					nextToken = req(i + 3);
 					if (nextToken == nullptr) {
 						std::cout << "Error: no token found; expected semicolon or assigment token" << std::endl;
@@ -237,19 +247,36 @@ int Parser::parse(AST& ast, const char* source) {
 					}
 
 					if (nextToken->type == tokenizer::TokenType::ASSIGNMENT) {
-						nextToken = req(i + 4);
-						if (nextToken == nullptr) {
-							std::cout << "Error: no token found; expected literal token" << std::endl;
-							return 1;
-						}
+						if (prevType == tokenizer::TokenType::TYPE) {
+							nextToken = req(i + 4);
+							if (nextToken == nullptr) {
+								std::cout << "Error: no token found; expected literal token" << std::endl;
+								return 1;
+							}
 
-						(*node)->child->sibling->sibling = new ASNode();
-						(*node)->child->sibling->sibling->type = ASNodeType::LITERAL_INTEGER;
-						(*node)->child->sibling->sibling->value = nextToken->value;
-						(*node)->child->sibling->sibling->sibling = nullptr;
-						(*node)->child->sibling->sibling->child = nullptr;
-						(*node)->child->sibling->sibling->parent = *node;
-						i += 2;
+							(*node)->child->sibling->sibling = new ASNode();
+							(*node)->child->sibling->sibling->value = nextToken->value;
+							(*node)->child->sibling->sibling->sibling = nullptr;
+							(*node)->child->sibling->sibling->child = nullptr;
+							(*node)->child->sibling->sibling->parent = *node;
+
+							if (nextToken->type == tokenizer::TokenType::IDENTIFIER) {
+								(*node)->child->sibling->sibling->type = ASNodeType::IDENTIFIER;
+							} else if (nextToken->type == tokenizer::TokenType::LITERAL) {
+								if (nextToken->value.find("\"") != std::string::npos) {
+									(*node)->child->sibling->sibling->type = ASNodeType::LITERAL_STRING;
+								} else if (nextToken->value.find(".") != std::string::npos) {
+									(*node)->child->sibling->sibling->type = ASNodeType::LITERAL_FLOAT;
+								} else if (nextToken->value == "true" || nextToken->value == "false") {
+									(*node)->child->sibling->sibling->type = ASNodeType::LITERAL_BOOL;
+								} else {
+									(*node)->child->sibling->sibling->type = ASNodeType::LITERAL_INTEGER;
+								}
+							}
+							i += 2;
+						} else if (prevType == tokenizer::TokenType::FUNCTION_TYPE) {
+							
+						}
 					}
 
 					if (prevNode != nullptr) {
