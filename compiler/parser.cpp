@@ -3,6 +3,7 @@
 #include "tokenizer.hpp"
 
 #include <iostream>
+#include <cstring>
 
 using namespace ksharp::compiler::parser;
 
@@ -117,11 +118,13 @@ int Parser::parse(AST& ast, const char* source) {
 		}
 	}
 
+	/*
 	for (tokenizer::Token& token : tokens) {
 		std::string str;
 		tokenizer.tokenToString(token, str);
 		std::cout << str << ": \"" << token.value << "\"" << std::endl;
 	}
+	*/
 
 	ASNode** node = &ast.root;
 	ASNode* prevNode = nullptr;
@@ -275,7 +278,29 @@ int Parser::parse(AST& ast, const char* source) {
 							}
 							i += 2;
 						} else if (prevType == tokenizer::TokenType::FUNCTION_TYPE) {
-							
+							nextToken = req(i + 4);
+							if (nextToken == nullptr) {
+								std::cout << "Error: no token found; expected scope token" << std::endl;
+								return 1;
+							}
+
+							(*node)->child->sibling->sibling = new ASNode();
+							(*node)->child->sibling->sibling->value = nextToken->value;
+							(*node)->child->sibling->sibling->sibling = nullptr;
+							(*node)->child->sibling->sibling->child = nullptr;
+							(*node)->child->sibling->sibling->parent = *node;
+							(*node)->child->sibling->sibling->type = ASNodeType::SCOPE;
+
+							nextToken = req(i + 5);
+
+							(*node)->child->sibling->sibling->sibling = new ASNode();
+							(*node)->child->sibling->sibling->sibling->value = nextToken->value;
+							(*node)->child->sibling->sibling->sibling->sibling = nullptr;
+							(*node)->child->sibling->sibling->sibling->child = nullptr;
+							(*node)->child->sibling->sibling->sibling->parent = *node;
+							(*node)->child->sibling->sibling->sibling->type = ASNodeType::SCOPE_END;
+
+							i += 2;
 						}
 					}
 

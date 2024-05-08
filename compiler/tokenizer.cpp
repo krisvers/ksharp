@@ -332,6 +332,49 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 
 					++j;
 					++metaInfo.column;
+				} else if (ch == '=') {
+					token.type = TokenType::ASSIGNMENT;
+					token.value = "=";
+					token.valuePtr = &source[j];
+					token.hasValue = true;
+					tokens.push_back(token);
+
+					while (ch != '{') {
+						++j;
+						ch = req(j);
+						++metaInfo.column;
+						if (ch == '\n') {
+							++metaInfo.line;
+							metaInfo.column = 0;
+						} else if (ch == '\0') {
+							std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
+							metaInfo.index = j;
+							return 1;
+						}
+					}
+
+					token.type = TokenType::SCOPE;
+					token.valuePtr = &source[j];
+					token.value = "{";
+					tokens.push_back(token);
+					
+					while (ch != '}') {
+						++j;
+						ch = req(j);
+						++metaInfo.column;
+						if (ch == '\n') {
+							++metaInfo.line;
+							metaInfo.column = 0;
+						} else if (ch == '\0') {
+							std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
+							metaInfo.index = j;
+							return 1;
+						}
+					}
+
+					token.type = TokenType::SCOPE_END;
+					token.valuePtr = &source[j];
+					token.value = "}";
 				}
 
 				i = j;
