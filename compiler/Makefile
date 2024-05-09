@@ -5,7 +5,7 @@ CXXSRC = $(shell find . -type f -name "*.cpp")
 OBJDIR = obj
 BUILDDIR = build
 BINARY = ksharpc
-CXXOBJ = $(subst -_=,$(OBJDIR)/,$(subst /,_,$(subst ./,-_=,$(subst .cpp,.o,$(CXXSRC)))))
+CXXOBJ = $(subst -_=,$(OBJDIR)/,$(subst ./,-_=,$(subst .cpp,.o,$(CXXSRC))))
 
 .PHONY: build obj link clean build-run
 
@@ -33,4 +33,5 @@ debug-make-vars:
 	@echo CXXOBJ: $(CXXOBJ)	
 
 $(OBJDIR)/%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $(subst -_=,$(OBJDIR)/,$(subst /,_,$(subst $(OBJDIR)/,-_=,$@)))
+		
