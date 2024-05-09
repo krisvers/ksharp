@@ -33,7 +33,7 @@ void Parser::freeNode(ASNode* node) {
 	delete node;
 }
 
-std::ostream& Parser::printNode(std::ostream& os, ASNode* node, unsigned int depth) {
+std::ostream& Parser::printNode(std::ostream& os, ASNode const* node, unsigned int depth) {
 	for (unsigned int i = 0; i < depth; ++i) {
 		os << "  ";
 	}
@@ -84,6 +84,12 @@ std::ostream& Parser::printNode(std::ostream& os, ASNode* node, unsigned int dep
 		case ASNodeType::RETURN:
 			os << "Return: \"" << node->value << "\"" << std::endl;
 			break;
+		case ASNodeType::TYPEDEF:
+			os << "Typedef: \"" << node->value << "\"" << std::endl;
+			break;
+		case ASNodeType::STRUCTDEF:
+			os << "Structdef: \"" << node->value << "\"" << std::endl;
+			break;
 		default:
 			os << "Unknown: \"" << node->value << "\"" << std::endl;
 			break;
@@ -100,12 +106,8 @@ std::ostream& Parser::printNode(std::ostream& os, ASNode* node, unsigned int dep
 	return os;
 }
 
-int Parser::parse(AST& ast, const char* source) {
-	MetaInfo metaInfo;
-	metaInfo.line = 1;
-	metaInfo.column = 0;
-	metaInfo.index = 0;
-	metaInfo.length = strlen(source);
+int Parser::parse(AST& ast, MetaInfo& metaInfo, const char* source) {
+	updateMetaInfo(metaInfo, source, 0);
 
 	tokenizer::Tokenizer tokenizer;
 	std::vector<tokenizer::Token> tokens;
@@ -118,13 +120,11 @@ int Parser::parse(AST& ast, const char* source) {
 		}
 	}
 
-	/*
-	for (tokenizer::Token& token : tokens) {
+	for (tokenizer::Token& t : tokens) {
 		std::string str;
-		tokenizer.tokenToString(token, str);
-		std::cout << str << ": \"" << token.value << "\"" << std::endl;
+		tokenizer.tokenToString(t, str);
+		std::cout << str << ": \"" << t.value << "\"" << std::endl;
 	}
-	*/
 
 	ASNode** node = &ast.root;
 	ASNode* prevNode = nullptr;
@@ -140,12 +140,14 @@ int Parser::parse(AST& ast, const char* source) {
 				if (nextToken->type == tokenizer::TokenType::TYPE_SEPARATOR) {
 					nextToken = req(i + 2);
 					if (nextToken == nullptr) {
-						std::cout << "Error: expected type token" << std::endl;
+						std::cout << "Error: no token; expected type token" << std::endl;
 						return 1;
 					}
 
 					if (nextToken->type != tokenizer::TokenType::TYPE && nextToken->type != tokenizer::TokenType::FUNCTION_TYPE) {
-						std::cout << "Error: expected type token" << std::endl;
+						std::string str;
+						tokenizer.tokenToString(*nextToken, str);
+						std::cout << "Error: expected type token found " << str << std::endl;
 						return 1;
 					}
 
@@ -275,12 +277,25 @@ int Parser::parse(AST& ast, const char* source) {
 								} else {
 									(*node)->child->sibling->sibling->type = ASNodeType::LITERAL_INTEGER;
 								}
+							} else {
+								std::string str;
+								tokenizer.tokenToString(*nextToken, str);
+								std::cout << "Error: expected literal or identifier token found " << str << std::endl;
+								return 1;
 							}
+
 							i += 2;
 						} else if (prevType == tokenizer::TokenType::FUNCTION_TYPE) {
 							nextToken = req(i + 4);
 							if (nextToken == nullptr) {
 								std::cout << "Error: no token found; expected scope token" << std::endl;
+								return 1;
+							}
+
+							if (nextToken->type != tokenizer::TokenType::SCOPE) {
+								std::string str;
+								tokenizer.tokenToString(*nextToken, str);
+								std::cout << "Error: expected scope token found " << str << std::endl;
 								return 1;
 							}
 
@@ -292,6 +307,17 @@ int Parser::parse(AST& ast, const char* source) {
 							(*node)->child->sibling->sibling->type = ASNodeType::SCOPE;
 
 							nextToken = req(i + 5);
+							if (nextToken == nullptr) {
+								std::cout << "Error: no token found; expected scope end token" << std::endl;
+								return 1;
+							}
+
+							if (nextToken->type != tokenizer::TokenType::SCOPE_END) {
+								std::string str;
+								tokenizer.tokenToString(*nextToken, str);
+								std::cout << "Error: expected scope end token found " << str << std::endl;
+								return 1;
+							}
 
 							(*node)->child->sibling->sibling->sibling = new ASNode();
 							(*node)->child->sibling->sibling->sibling->value = nextToken->value;
@@ -346,15 +372,186 @@ int Parser::parse(AST& ast, const char* source) {
 					} else {
 						(*node)->child->type = ASNodeType::LITERAL_INTEGER;
 					}
+				} else {
+					std::string str;
+					tokenizer.tokenToString(*nextToken, str);
+					std::cout << "Error: expected literal or identifier token found " << str << std::endl;
+					return 1;
 				}
 
 				(*node)->child->value = nextToken->value;
 				(*node)->child->sibling = nullptr;
 				(*node)->child->child = nullptr;
 				(*node)->child->parent = *node;
-
+				
 				i += 1;
 			}
+
+			if (prevNode != nullptr) {
+				prevNode->sibling = *node;
+			}
+
+			prevNode = *node;
+			node = &(*node)->sibling;
+		} else if (token->type == tokenizer::TokenType::TYPEDEF) {
+			*node = new ASNode();
+			(*node)->type = ASNodeType::TYPEDEF;
+			(*node)->value = token->value;
+			(*node)->sibling = nullptr;
+			(*node)->child = nullptr;
+			(*node)->parent = parent;
+
+			nextToken = req(i + 1);
+			if (nextToken == nullptr) {
+				std::cout << "Error: no token found; expected identifier token" << std::endl;
+				return 1;
+			}
+
+			if (nextToken->type != tokenizer::TokenType::IDENTIFIER) {
+				std::string str;
+				tokenizer.tokenToString(*nextToken, str);
+				std::cout << "Error: expected identifier token found " << str << std::endl;
+				return 1;
+			}
+
+			(*node)->child = new ASNode();
+			(*node)->child->type = ASNodeType::TYPE;
+			(*node)->child->value = nextToken->value;
+			(*node)->child->sibling = nullptr;
+			(*node)->child->child = nullptr;
+			(*node)->child->parent = *node;
+
+			nextToken = req(i + 2);
+			if (nextToken == nullptr) {
+				std::cout << "Error: no token found; expected identifier or scope token" << std::endl;
+				return 1;
+			}
+
+			if (nextToken->type != tokenizer::TokenType::IDENTIFIER && nextToken->type != tokenizer::TokenType::SCOPE) {
+				std::string str;
+				tokenizer.tokenToString(*nextToken, str);
+				std::cout << "Error: expected identifier or scope token found " << str << std::endl; 
+				return 1;
+			}
+
+			if (nextToken->type == tokenizer::TokenType::IDENTIFIER) {
+				(*node)->child->sibling = new ASNode();
+				(*node)->child->sibling->type = ASNodeType::TYPE;
+				(*node)->child->sibling->value = nextToken->value;
+				(*node)->child->sibling->sibling = nullptr;
+				(*node)->child->sibling->child = nullptr;
+				(*node)->child->sibling->parent = *node;
+				i += 3;
+			} else {
+				(*node)->type = ASNodeType::STRUCTDEF;
+
+				(*node)->child->sibling = new ASNode();
+				(*node)->child->sibling->type = ASNodeType::SCOPE;
+				(*node)->child->sibling->value = nextToken->value;
+				(*node)->child->sibling->sibling = nullptr;
+				(*node)->child->sibling->child = nullptr;
+				(*node)->child->sibling->parent = *node;
+
+				i += 3;
+				nextToken = req(i);
+
+				ASNode** memberNode = &(*node)->child->sibling->child;
+				while (nextToken != nullptr && nextToken->type != tokenizer::TokenType::SCOPE_END) {
+					if (nextToken->type == tokenizer::TokenType::IDENTIFIER) {
+						(*memberNode) = new ASNode();
+						(*memberNode)->type = ASNodeType::DECLARATION;
+						(*memberNode)->value = nextToken->value;
+						(*memberNode)->sibling = nullptr;
+						(*memberNode)->child = nullptr;
+						(*memberNode)->parent = (*node)->child->sibling;
+
+						(*memberNode)->child = new ASNode();
+						(*memberNode)->child->type = ASNodeType::IDENTIFIER;
+						(*memberNode)->child->value = nextToken->value;
+						(*memberNode)->child->sibling = nullptr;
+						(*memberNode)->child->child = nullptr;
+						(*memberNode)->child->parent = (*node)->child->sibling->child;
+
+						nextToken = req(i + 1);
+						if (nextToken == nullptr) {
+							std::cout << "Error: no token found; expected type separator token" << std::endl;
+							return 1;
+						}
+
+						if (nextToken->type != tokenizer::TokenType::TYPE_SEPARATOR) {
+							std::string str;
+							tokenizer.tokenToString(*nextToken, str);
+							std::cout << "Error: expected type separator token found " << str << std::endl;
+							return 1;
+						}
+
+						nextToken = req(i + 2);
+						if (nextToken == nullptr) {
+							std::cout << "Error: no token found; expected type token" << std::endl;
+							return 1;
+						}
+
+						if (nextToken->type != tokenizer::TokenType::TYPE) {
+							std::string str;
+							tokenizer.tokenToString(*nextToken, str);
+							std::cout << "Error: expected type token found " << str << std::endl;
+							return 1;
+						}
+
+						(*memberNode)->child->sibling = new ASNode();
+						(*memberNode)->child->sibling->type = ASNodeType::TYPE;
+						(*memberNode)->child->sibling->value = nextToken->value;
+						(*memberNode)->child->sibling->sibling = nullptr;
+						(*memberNode)->child->sibling->child = nullptr;
+						(*memberNode)->child->sibling->parent = (*memberNode)->child;
+
+						nextToken = req(i + 3);
+						if (nextToken == nullptr) {
+							std::cout << "Error: no token found; expected semicolon token" << std::endl;
+							return 1;
+						}
+
+						if (nextToken->type != tokenizer::TokenType::SEMICOLON) {
+							std::string str;
+							tokenizer.tokenToString(*nextToken, str);
+							std::cout << "Error: expected semicolon token found " << str << std::endl;
+							return 1;
+						}
+
+						i += 4;
+						printNode(std::cout, (*memberNode), 0);
+						memberNode = &(*memberNode)->sibling;
+					}
+
+					nextToken = req(i);
+				}
+
+				if (nextToken == nullptr) {
+					std::cout << "Error: no token found; expected scope end token" << std::endl;
+					return 1;
+				}
+
+				if (nextToken->type != tokenizer::TokenType::SCOPE_END) {
+					std::string str;
+					tokenizer.tokenToString(*nextToken, str);
+					std::cout << "Error: expected scope end token found " << str << std::endl;
+					return 1;
+				}
+
+				(*node)->child->sibling->sibling = new ASNode();
+				(*node)->child->sibling->sibling->type = ASNodeType::SCOPE_END;
+				(*node)->child->sibling->sibling->value = nextToken->value;
+				(*node)->child->sibling->sibling->sibling = nullptr;
+				(*node)->child->sibling->sibling->child = nullptr;
+				(*node)->child->sibling->sibling->parent = (*node)->child->sibling;
+			}
+
+			if (prevNode != nullptr) {
+				prevNode->sibling = *node;
+			}
+
+			prevNode = *node;
+			node = &(*node)->sibling;
 		}
 	}
 

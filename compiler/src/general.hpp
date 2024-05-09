@@ -10,6 +10,8 @@ struct MetaInfo {
 	unsigned int length;
 };
 
+void updateMetaInfo(MetaInfo& metaInfo, const char* source, unsigned int index);
+
 } // namespace ksharp::compiler
 
 #endif

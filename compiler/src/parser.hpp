@@ -29,6 +29,9 @@ enum class ASNodeType {
 
 	KEYWORD,
 	RETURN,
+
+	TYPEDEF,
+	STRUCTDEF,
 };
 
 struct ASNode {
@@ -50,9 +53,9 @@ struct ASKeyword {
 class Parser {
 public:
 	void freeNode(ASNode* node);
-	std::ostream& printNode(std::ostream& os, ASNode* node, unsigned int depth);
+	std::ostream& printNode(std::ostream& os, ASNode const* node, unsigned int depth);
 
-	int parse(AST& ast, const char* source);
+	int parse(AST& ast, MetaInfo& metaInfo, const char* source);
 
 private:
 	std::map<std::string, ASKeyword> keywords;

@@ -40,6 +40,9 @@ void Tokenizer::tokenToString(Token& token, std::string& str) {
 		case TokenType::KEYWORD:
 			str = "KEYWORD";
 			break;
+		case TokenType::TYPEDEF:
+			str = "TYPEDEF";
+			break;
 		default:
 			str = "UNKNOWN";
 			break;
@@ -89,7 +92,7 @@ static bool isTypeSeparator(char ch) {
 }
 
 static bool isTypeChar(char ch) {
-	return isAlphaNumeric(ch);
+	return isAlphaNumeric(ch) || ch == '_';
 }
 
 static bool isStartTypeChar(char ch) {
@@ -105,11 +108,8 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 
 	unsigned int i = metaInfo.index;
 	for (; i < metaInfo.length; ++i) {
-		++metaInfo.column;
 		char ch = source[i];
 		if (ch == '\n') {
-			metaInfo.column = 0;
-			++metaInfo.line;
 			continue;
 		}
 
@@ -122,18 +122,15 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			if (c == '*') {
 				while (ch != '*' || c != '/') {
 					++i;
-					++metaInfo.column;
 					c = req(i + 1);
 					ch = req(i);
 					if (ch == '\n') {
-						metaInfo.column = 0;
-						++metaInfo.line;
 						continue;
 					}
 
 					if (c == '\0' || ch == '\0') {
+						updateMetaInfo(metaInfo, source, i);
 						std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-						metaInfo.index = i;
 						return 1;
 					}
 				}
@@ -146,15 +143,10 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			while (isIdentifier(ch)) {
 				++j;
 				ch = req(j);
-				++metaInfo.column;
-				if (ch == '\n') {
-					++metaInfo.line;
-					metaInfo.column = 0;
-				}
 
 				if (ch == '\0') {
+					updateMetaInfo(metaInfo, source, j);
 					std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-					metaInfo.index = j;
 					return 1;
 				}
 			}
@@ -176,15 +168,10 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			while (isLiteral(ch)) {
 				++j;
 				ch = req(j);
-				++metaInfo.column;
-				if (ch == '\n') {
-					++metaInfo.line;
-					metaInfo.column = 0;
-				}
 				
 				if (ch == '\0') {
+					updateMetaInfo(metaInfo, source, j);
 					std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-					metaInfo.index = j - 1;
 					return 1;
 				}
 			}
@@ -200,16 +187,10 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			unsigned int j = i;
 			++j;
 			ch = req(j);
-			++metaInfo.column;
-			if (ch == '\n') {
-				++metaInfo.line;
-				metaInfo.column = 0;
-			}
 
 			while (ch != '"') {
 				++j;
 				ch = req(j);
-				++metaInfo.column;
 				if (ch == '\\') {
 					++j;
 					char c = req(j);
@@ -218,14 +199,9 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 					}
 				}
 
-				if (ch == '\n') {
-					++metaInfo.line;
-					metaInfo.column = 0;
-				}
-
 				if (ch == '\0') {
+					updateMetaInfo(metaInfo, source, j);
 					std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-					metaInfo.index = j;
 					return 1;
 				}
 			}
@@ -248,15 +224,10 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			while (isWhitespace(ch)) {
 				++j;
 				ch = req(j);
-				++metaInfo.column;
-				if (ch == '\n') {
-					++metaInfo.line;
-					metaInfo.column = 0;
-				}
 
 				if (ch == '\0') {
+					updateMetaInfo(metaInfo, source, j);
 					std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-					metaInfo.index = j;
 					return 1;
 				}
 			}
@@ -268,15 +239,10 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 				while (ch != ')') {
 					++j;
 					ch = req(j);
-					++metaInfo.column;
-					if (ch == '\n') {
-						++metaInfo.line;
-						metaInfo.column = 0;
-					}
 
 					if (ch == '\0') {
+						updateMetaInfo(metaInfo, source, j);
 						std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-						metaInfo.index = j;
 						return 1;
 					}
 				}
@@ -284,15 +250,10 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 				while (isWhitespace(ch)) {
 					++j;
 					ch = req(j);
-					++metaInfo.column;
-					if (ch == '\n') {
-						++metaInfo.line;
-						metaInfo.column = 0;
-					}
 
 					if (ch == '\0') {
+						updateMetaInfo(metaInfo, source, j);
 						std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-						metaInfo.index = j;
 						return 1;
 					}
 				}
@@ -300,15 +261,10 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 				while (ch != ';' && ch != '=') {
 					++j;
 					ch = req(j);
-					++metaInfo.column;
-					if (ch == '\n') {
-						++metaInfo.line;
-						metaInfo.column = 0;
-					}
 
 					if (ch == '\0') {
+						updateMetaInfo(metaInfo, source, j);
 						std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-						metaInfo.index = j;
 						return 1;
 					}
 				}
@@ -331,7 +287,6 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 					token.hasValue = true;
 
 					++j;
-					++metaInfo.column;
 				} else if (ch == '=') {
 					token.type = TokenType::ASSIGNMENT;
 					token.value = "=";
@@ -342,13 +297,9 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 					while (ch != '{') {
 						++j;
 						ch = req(j);
-						++metaInfo.column;
-						if (ch == '\n') {
-							++metaInfo.line;
-							metaInfo.column = 0;
-						} else if (ch == '\0') {
+						if (ch == '\0') {
+							updateMetaInfo(metaInfo, source, j);
 							std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-							metaInfo.index = j;
 							return 1;
 						}
 					}
@@ -361,13 +312,9 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 					while (ch != '}') {
 						++j;
 						ch = req(j);
-						++metaInfo.column;
-						if (ch == '\n') {
-							++metaInfo.line;
-							metaInfo.column = 0;
-						} else if (ch == '\0') {
+						if (ch == '\0') {
+							updateMetaInfo(metaInfo, source, j);
 							std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-							metaInfo.index = j;
 							return 1;
 						}
 					}
@@ -381,8 +328,8 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 				break;
 			} else {
 				if (!isStartTypeChar(ch)) {
+					updateMetaInfo(metaInfo, source, j);
 					std::cout << "Error: Unexpected character '" << ch << "' (0x" << std::hex << static_cast<unsigned int>(ch) << std::dec << ") at (" << metaInfo.line << ":" << metaInfo.column << ")\nExpected type name" << std::endl;
-					metaInfo.index = i;
 					return 1;
 				}
 
@@ -391,15 +338,10 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 				while (isTypeChar(ch)) {
 					++j;
 					ch = req(j);
-					++metaInfo.column;
-					if (ch == '\n') {
-						++metaInfo.line;
-						metaInfo.column = 0;
-					}
 
 					if (ch == '\0') {
+						updateMetaInfo(metaInfo, source, j);
 						std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-						metaInfo.index = j;
 						return 1;
 					}
 				}
@@ -418,15 +360,10 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			while (isLiteral(ch)) {
 				++j;
 				ch = req(j);
-				++metaInfo.column;
-				if (ch == '\n') {
-					++metaInfo.line;
-					metaInfo.column = 0;
-				}
 
 				if (ch == '\0') {
+					updateMetaInfo(metaInfo, source, j);
 					std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-					metaInfo.index = j - 1;
 					return 1;
 				}
 			}
@@ -442,7 +379,6 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			token.hasValue = true;
 
 			++i;
-			++metaInfo.column;
 			break;
 		} else if (ch == '}') {
 			token.type = TokenType::SCOPE_END;
@@ -451,7 +387,6 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			token.hasValue = true;
 
 			++i;
-			++metaInfo.column;
 			break;
 		} else if (ch == ';') {
 			token.type = TokenType::SEMICOLON;
@@ -460,7 +395,6 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			token.hasValue = true;
 
 			++i;
-			++metaInfo.column;
 			break;
 		} else if (ch == '=') {
 			token.type = TokenType::ASSIGNMENT;
@@ -468,50 +402,36 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 			token.valuePtr = &source[i];
 			token.hasValue = true;
 
-			tokens.push_back(token);
-
-			++metaInfo.column;
 			unsigned int j = ++i;
 			ch = req(j);
 			while (isWhitespace(ch)) {
 				++j;
 				ch = req(j);
-				++metaInfo.column;
-				if (ch == '\n') {
-					++metaInfo.line;
-					metaInfo.column = 0;
-				}
 
 				if (ch == '\0') {
+					updateMetaInfo(metaInfo, source, j);
 					std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-					metaInfo.index = j;
 					return 1;
 				}
 			}
 
 			i = j;
 			if (ch == ';') {
+				updateMetaInfo(metaInfo, source, i);
 				std::cout << "Error: Unexpected character '" << ch << "' (0x" << std::hex << static_cast<unsigned int>(ch) << std::dec << ") at (" << metaInfo.line << ":" << metaInfo.column << ")\nExpected literal" << std::endl;
-				metaInfo.index = i;
 				return 1;
-			}
-
-			if (isLiteral(ch)) {
+			} else if (isLiteral(ch)) {
+				tokens.push_back(token);
 				token.type = TokenType::LITERAL;
 				token.valuePtr = &source[i];
 
 				while (isLiteral(ch)) {
 					++j;
 					ch = req(j);
-					++metaInfo.column;
-					if (ch == '\n') {
-						++metaInfo.line;
-						metaInfo.column = 0;
-					}
 
 					if (ch == '\0') {
+						updateMetaInfo(metaInfo, source, j);
 						std::cout << "Error: Unexpected end of file at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-						metaInfo.index = j - 1;
 						return 1;
 					}
 				}
@@ -519,18 +439,23 @@ int Tokenizer::tokenize(const char* source, std::vector<Token>& tokens, MetaInfo
 				token.value = std::string(&source[i], j - i);
 				token.hasValue = true;
 				i = j;
-				break;
 			}
-
+			break;
+		} else if (ch == '#') {
+			token.type = TokenType::TYPEDEF;
+			token.value = "#";
+			token.valuePtr = &source[i];
+			token.hasValue = true;
+			++i;
 			break;
 		} else {
+			updateMetaInfo(metaInfo, source, i);
 			std::cout << "Error: Unexpected character '" << ch << "' (0x" << std::hex << static_cast<unsigned int>(ch) << std::dec << ") at (" << metaInfo.line << ":" << metaInfo.column << ")" << std::endl;
-			metaInfo.index = i;
 			return 1;
 		}
 	}
 
-	metaInfo.index = i;
+	updateMetaInfo(metaInfo, source, i);
 	if (token.type == TokenType::NONE) {
 		return 1;
 	}

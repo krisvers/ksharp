@@ -7,7 +7,15 @@
 using namespace ksharp::compiler;
 
 const char* test_string = R"(
-var: u32 = 2;
+#test_type u32;
+#test_struct {
+	x: u32;
+	y: u32;
+}
+
+string: string = "Hello, World!\n\n@#$%^&*()_+{}|:<>?~`";
+var: test_type = 2;
+struct: test_struct;
 fib: (n: u32) u32 = {
 
 }
@@ -34,12 +42,12 @@ std::map<std::string, const char*> typeMap = {
 void codeGenIndent(std::ostream& ostream, unsigned int depth) {
 	if (depth == 0) return;
 
-	while (--depth) {
+	while (depth--) {
 		ostream << "  ";
 	}
 }
 
-bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth) {
+bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth, bool prefix) {
 	if (node == nullptr) {
 		return false;
 	}
@@ -47,34 +55,42 @@ bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth
 	switch (node->type) {
 		case parser::ASNodeType::DECLARATION: {
 			codeGenIndent(ostream, depth);
-			codeGenForC(ostream, node->child->sibling, 0);
+			codeGenForC(ostream, node->child->sibling, 0, prefix);
 			ostream << " ";
-			codeGenForC(ostream, node->child, 0);
+			codeGenForC(ostream, node->child, 0, prefix);
 
 			/* assignment */
 			if (node->child->sibling->sibling != nullptr) {
 				ostream << " = ";
-				codeGenForC(ostream, node->child->sibling->sibling, 0);
+				codeGenForC(ostream, node->child->sibling->sibling, 0, prefix);
 			}
 			ostream << ";\n";
 			break;
 		}
 		case parser::ASNodeType::IDENTIFIER: {
-			ostream << "ksharp_" << node->value;
+			if (prefix) {
+				ostream << "ksharp_" << node->value;
+			} else {
+				ostream << node->value;
+			}
 			break;
 		}
 		case parser::ASNodeType::RETURN_TYPE:
 		case parser::ASNodeType::TYPE: {
-			ostream << typeMap[node->value];
+			if (typeMap.find(node->value) == typeMap.end()) {
+				ostream << "ksharp_" << node->value;
+			} else {
+				ostream << typeMap[node->value];
+			}
 			break;
 		}
 		case parser::ASNodeType::FUNCTION_DEFINITION: {
 			codeGenIndent(ostream, depth);
-			codeGenForC(ostream, node->child, 0);
+			codeGenForC(ostream, node->child, 0, prefix);
 			ostream << ": (";
 			parser::ASNode* arg = node->child->sibling->sibling;
 			while (arg != nullptr) {
-				codeGenForC(ostream, arg, 0);
+				codeGenForC(ostream, arg, 0, prefix);
 				arg = arg->sibling;
 				if (arg == nullptr) {
 					break;
@@ -83,14 +99,14 @@ bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth
 				ostream << ", ";
 			}
 			ostream << ") ";
-			codeGenForC(ostream, arg->sibling, 0);
+			codeGenForC(ostream, arg->sibling, 0, prefix);
 			break;
 		}
 		case parser::ASNodeType::FUNCTION_DECLARATION: {
 			codeGenIndent(ostream, depth);
-			codeGenForC(ostream, node->child->sibling, 0);
+			codeGenForC(ostream, node->child->sibling, 0, prefix);
 			ostream << " ";
-			codeGenForC(ostream, node->child, 0);
+			codeGenForC(ostream, node->child, 0, prefix);
 			ostream << "(";
 
 			parser::ASNode* arg = node->child->sibling->sibling;
@@ -100,7 +116,7 @@ bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth
 					break;
 				}
 
-				codeGenForC(ostream, arg, 0);
+				codeGenForC(ostream, arg, 0, prefix);
 				arg = arg->sibling;
 				if (arg != nullptr) {
 					ostream << ", ";
@@ -111,7 +127,7 @@ bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth
 			if (arg != nullptr) {
 				parser::ASNode* code = arg;
 				while (code != nullptr) {
-					codeGenForC(ostream, code, depth + 1);
+					codeGenForC(ostream, code, depth + 1, prefix);
 					code = code->sibling;
 				}
 			} else {
@@ -122,9 +138,9 @@ bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth
 			break;
 		}
 		case parser::ASNodeType::FUNCTION_ARGUMENT: {
-			codeGenForC(ostream, node->child->sibling, 0);
+			codeGenForC(ostream, node->child->sibling, 0, prefix);
 			ostream << " ";
-			codeGenForC(ostream, node->child, 0);
+			codeGenForC(ostream, node->child, 0, prefix);
 			break;
 		}
 		case parser::ASNodeType::SCOPE: {
@@ -158,10 +174,42 @@ bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth
 		case parser::ASNodeType::RETURN: {
 			codeGenIndent(ostream, depth);
 			ostream << "return ";
-			codeGenForC(ostream, node->child, 0);
+			codeGenForC(ostream, node->child, 0, prefix);
 			ostream << ";\n";
 			break;
 		}
+		case parser::ASNodeType::TYPEDEF: {
+			codeGenIndent(ostream, depth);
+			ostream << "typedef ";
+			codeGenForC(ostream, node->child, 0, prefix);
+			ostream << " ";
+			codeGenForC(ostream, node->child->sibling, 0, prefix);
+			ostream << ";\n";
+			break;
+		}
+		case parser::ASNodeType::STRUCTDEF: {
+			codeGenIndent(ostream, depth);
+			ostream << "typedef struct ";
+			codeGenForC(ostream, node->child, 0, prefix);
+			ostream << " {\n";
+
+			parser::ASNode* scopeNode = node->child->sibling;
+			if (scopeNode == nullptr) {
+				break;
+			}
+
+			parser::ASNode* memberNode = scopeNode->child;
+			while (memberNode != nullptr && memberNode->type != parser::ASNodeType::SCOPE_END) {
+				codeGenForC(ostream, memberNode, depth + 1, false);
+				memberNode = memberNode->sibling;
+			}
+
+			codeGenIndent(ostream, depth);
+			ostream << "};\n";
+			break;
+		}
+		default:
+			break;
 	}
 
 	return true;
@@ -181,8 +229,12 @@ int main(int argc, char** argv) {
 
 	parser::Parser parser;
 	parser::AST ast;
+	MetaInfo metaInfo;
 
-	parser.parse(ast, test_string);
+	if (parser.parse(ast, metaInfo, test_string) != 0) {
+		std::cout << "Error parsing source\n";
+		return 1;
+	}
 	if (!noPrint) {
 		std::cout << "\nParser AST:\n| -------- |\n";
 		parser.printNode(std::cout, ast.root, 0);
@@ -195,7 +247,7 @@ int main(int argc, char** argv) {
 	/* c code gen */
 	parser::ASNode* node = ast.root;
 	while (node != nullptr) {
-		codeGenForC(std::cout, node, 0);
+		codeGenForC(std::cout, node, 0, true);
 		node = node->sibling;
 	}
 

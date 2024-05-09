@@ -21,6 +21,7 @@ enum class TokenType {
 	ASSIGNMENT,
 	SEMICOLON,
 	KEYWORD,
+	TYPEDEF,
 };
 
 struct Token {
