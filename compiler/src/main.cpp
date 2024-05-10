@@ -2,26 +2,10 @@
 
 #include <iostream>
 #include <cstring>
+#include <cstdio>
 #include <map>
 
 using namespace ksharp::compiler;
-
-const char* test_string = R"(
-#test_type u32;
-#test_struct {
-	x: u32;
-	y: u32;
-}
-
-string: string = "Hello, World!\n\n@#$%^&*()_+{}|:<>?~`";
-var: test_type = 2;
-struct: test_struct;
-fib: (n: u32) u32 = {
-
-}
-
-main: () s32;
-)";
 
 std::map<std::string, const char*> typeMap = {
 	{ "u64", "uint64_t" },
@@ -216,25 +200,56 @@ bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth
 }
 
 int main(int argc, char** argv) {
+	char* source = nullptr;
+
 	bool noPrint = false;
 	if (argc > 1) {
 		if (strcmp(argv[1], "-c") == 0) {
 			noPrint = true;
+		} else {
+			// load source from file argv[1]
+			FILE* fp = nullptr;
+			if (fopen_s(&fp, argv[1], "rb") != 0) {
+				std::cout << "Error opening file\n";
+				return 1;
+			}
+
+			if (fp == nullptr) {
+				std::cout << "Error opening file\n";
+				return 1;
+			}
+
+			fseek(fp, 0, SEEK_END);
+			long size = ftell(fp);
+			fseek(fp, 0, SEEK_SET);
+
+			source = new char[size + 1];
+			if (fread((void*) source, 1, size, fp) != size) {
+				std::cout << "Error reading file\n";
+				return 1;
+			}
+
+			fclose(fp);
+			source[size] = '\0';
 		}
 	}
 
 	if (!noPrint) {
-		std::cout << "Source:\n| -------- |" << test_string << "| -------- |\n\n";
+		std::cout << "Source:\n| -------- |\n" << source << "\n| -------- |\n\n";
 	}
 
 	parser::Parser parser;
 	parser::AST ast;
-	MetaInfo metaInfo;
 
-	if (parser.parse(ast, metaInfo, test_string) != 0) {
+	MetaInfo metaInfo;
+	metaInfo.originalSource = const_cast<const char*>(source);
+	metaInfo.originalLength = (unsigned int) strlen(source);
+
+	if (parser.parse(ast, metaInfo, metaInfo.originalSource) != 0) {
 		std::cout << "Error parsing source\n";
 		return 1;
 	}
+	
 	if (!noPrint) {
 		std::cout << "\nParser AST:\n| -------- |\n";
 		parser.printNode(std::cout, ast.root, 0);

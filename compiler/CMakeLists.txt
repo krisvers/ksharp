@@ -21,10 +21,6 @@ add_executable(${BINARY} ${CXXSRC})
 
 target_compile_options(${BINARY} PRIVATE ${CMAKE_CXX_FLAGS})
 
-set_target_properties(${BINARY} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${BUILDDIR}
-)
-
 target_include_directories(${BINARY} PRIVATE ${OBJDIR})
 
 target_link_libraries(${BINARY} PRIVATE)

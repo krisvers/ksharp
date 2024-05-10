@@ -106,14 +106,62 @@ std::ostream& Parser::printNode(std::ostream& os, ASNode const* node, unsigned i
 	return os;
 }
 
-int Parser::parse(AST& ast, MetaInfo& metaInfo, const char* source) {
-	updateMetaInfo(metaInfo, source, 0);
-
+int Parser::parse(AST& ast, MetaInfo& metaInfo, const char* originalSource) {
 	tokenizer::Tokenizer tokenizer;
 	std::vector<tokenizer::Token> tokens;
 	tokenizer::Token* token;
 
-	while (tokenizer.tokenize(source, tokens, metaInfo) == 0) {
+	char* source = new char[metaInfo.originalLength + 1];
+	{
+		source[metaInfo.originalLength] = '\0';
+
+		unsigned int strippedLength = 0;
+		for (unsigned int i = 0; i < metaInfo.originalLength; ++i) {
+			char ch = originalSource[i];
+			if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r') {
+				continue;
+			} else if (ch == '\0') {
+				break;
+			} else if (ch == '"') {
+				source[strippedLength] = ch;
+				++strippedLength;
+				++i;
+				while (originalSource[i] != '"') {
+					source[strippedLength] = originalSource[i];
+					++strippedLength;
+					++i;
+
+					if (originalSource[i] == '\0' || strippedLength >= metaInfo.originalLength) {
+						std::cout << "Error: no closing quote found; ran into end of file" << std::endl;
+						return 1;
+					}
+				}
+			}
+			
+			source[strippedLength] = ch;
+			++strippedLength;
+		}
+
+		char* newSource = new char[strippedLength + 1];
+		memcpy(newSource, source, strippedLength);
+		newSource[strippedLength] = '\0';
+
+		delete[] source;
+		source = newSource;
+		metaInfo.length = strippedLength;
+	}
+
+	updateMetaInfo(metaInfo, source, 0);
+
+	while (true) {
+		int result = tokenizer.tokenize(source, tokens, metaInfo);
+		if (result == 1) {
+			break;
+		} else if (result != 0) {
+			std::cout << "Error tokenizing source" << std::endl;
+			return 1;
+		}
+
 		token = &tokens[tokens.size() - 1];
 		if (token->type == tokenizer::TokenType::NONE) {
 			break;
