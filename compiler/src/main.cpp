@@ -202,7 +202,7 @@ bool codeGenForC(std::ostream& ostream, parser::ASNode* node, unsigned int depth
 int main(int argc, char** argv) {
 	char* source = nullptr;
 
-	bool noPrint = false;
+	bool noPrint = true;
 	if (argc > 1) {
 		if (strcmp(argv[1], "-c") == 0) {
 			noPrint = true;
@@ -235,7 +235,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (!noPrint) {
-		std::cout << "Source:\n| -------- |\n" << source << "\n| -------- |\n\n";
+		//std::cout << "Source:\n| -------- |\n" << source << "\n| -------- |\n\n";
 	}
 
 	parser::Parser parser;
@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
 		std::cout << "Error parsing source\n";
 		return 1;
 	}
-	
+
 	if (!noPrint) {
 		std::cout << "\nParser AST:\n| -------- |\n";
 		parser.printNode(std::cout, ast.root, 0);
@@ -261,10 +261,12 @@ int main(int argc, char** argv) {
 
 	/* c code gen */
 	parser::ASNode* node = ast.root;
+	/*
 	while (node != nullptr) {
 		codeGenForC(std::cout, node, 0, true);
 		node = node->sibling;
 	}
+	*/
 
 	std::cout <<
 R"(

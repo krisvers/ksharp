@@ -24,10 +24,12 @@ void Parser::freeNode(ASNode* node) {
 
 	if (node->sibling != nullptr) {
 		freeNode(node->sibling);
+		node->sibling = nullptr;
 	}
 
 	if (node->child != nullptr) {
 		freeNode(node->child);
+		node->child = nullptr;
 	}
 
 	delete node;
@@ -168,11 +170,13 @@ int Parser::parse(AST& ast, MetaInfo& metaInfo, const char* originalSource) {
 		}
 	}
 
+	/*
 	for (tokenizer::Token& t : tokens) {
 		std::string str;
 		tokenizer.tokenToString(t, str);
 		std::cout << str << ": \"" << t.value << "\"" << std::endl;
 	}
+	*/
 
 	ASNode** node = &ast.root;
 	ASNode* prevNode = nullptr;
